@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+
+<mapper namespace="com.sample.menu.mapper.MenuMapper">
+
+    <select id="selectMenuList" resultType="com.sample.menu.model.MenuModel">
+        SELECT menu_no
+             ,super_menu_no
+             ,menu_order
+             ,page_no
+             ,visible
+             ,page_url
+             ,menu_name
+             ,icon
+             ,permission
+             ,writable
+             ,depth_level
+        FROM (
+                 SELECT ani.MENU_NO
+                      ,ani.SUPER_MENU_NO
+                      ,ani.MENU_ORDER
+                      ,ani.PAGE_NO
+                      ,IFNULL(ani.VISIBLE, 1) AS VISIBLE
+                      ,ani.PAGE_URL
+                      ,ani.MENU_NAME
+                      ,ani.ICON
+                      ,IFNULL(B.PERMISSION, '0') AS PERMISSION
+                      ,IFNULL(B.WRITABLE, '0') AS WRITABLE
+                      ,RQ.LEVEL AS DEPTH_LEVEL
+                 FROM (
+                          SELECT FNC_HIERARCHI() AS menu_no
+                               ,@level AS LEVEL
+                          FROM (
+                                   SELECT @start_with := 0
+				,@id := @start_with
+				,@LEVEL := 0
+                               ) vars
+                                   JOIN T_MENU
+                          WHERE @id IS NOT NULL
+                      ) AS RQ
+                          INNER JOIN T_MENU ani ON RQ.menu_no = ani.menu_no
+                          LEFT OUTER JOIN (
+                     SELECT MENU_NO
+                          ,PERMISSION
+                          ,WRITABLE
+                     FROM T_WEBMENUPERMISSION AS P
+                              INNER JOIN T_USER AS U ON P.USER_GROUP_NO = U.USER_GROUP_NO
+                         AND U.USER_ID = #{user_id}
+                 ) AS B ON RQ.MENU_NO = B.MENU_NO
+                 WHERE 1 = 1
+                   AND B.PERMISSION = '1'
+             ) A
+        ORDER BY DEPTH_LEVEL, MENU_ORDER
+    </select>
+
+
+</mapper>
